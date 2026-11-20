@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<body>
+<div id="result"></div>
+<script>
+const source = new EventSource("/chat/stream", {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        messages: [{role:"user", content:"简单介绍RAG"}],
+        temperature:0.2,
+        top_p:0.7,
+        stream:true
+    })
+});
+source.onmessage = (e) => {
+    if(e.data === "[DONE]"){
+        source.close();
+        return;
+    }
+    const obj = JSON.parse(e.data);
+    const text = obj.choices[0].delta.content || "";
+    document.getElementById("result").innerText += text;
+};
+</script>
+</body>
+</html>
