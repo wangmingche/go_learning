@@ -7,14 +7,12 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"math/rand"
-	"net/http"
-	"strings"
 	"time"
 
+	"github.com/juju/ratelimit"
 	"github.com/sony/gobreaker"
-	"github.com/uju/ratelimit"
 )
 
 /**
@@ -71,7 +69,7 @@ var cb = gobreaker.NewCircuitBreaker(gobreaker.Settings{
 	Timeout:     3 * time.Second, // open冷却时间
 	ReadyToTrip: func(counts gobreaker.Counts) bool {
 		// 连续失败3次触发熔断打开
-		return counts.TotalRequests > 5 && float64(counts.TotalFailures)/float64(counts.TotalRequests) > 0.5
+		return counts.Requests > 5 && float64(counts.TotalFailures)/float64(counts.Requests) > 0.5
 	},
 })
 
@@ -103,7 +101,7 @@ func callWithRetry(ctx context.Context,maxRetry int) error {
 		}
 		time.Sleep(delay)
 	}
-	return nil
+	return err
 }
 
 
@@ -116,6 +114,14 @@ func mockLLMCall(ctx context.Context) (interface{}, error) {
 		// return nil, fmt.Errorf("llm err")
 		return "ok", nil
 	}
+}
+
+func main() {
+	if err := callWithRetry(context.Background(), 3); err != nil {
+		log.Printf("调用失败：%v", err)
+		return
+	}
+	log.Println("调用成功")
 }
 
 
