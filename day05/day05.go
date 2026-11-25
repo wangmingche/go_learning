@@ -114,43 +114,52 @@ Day5 规划：**RAG 深度工程：多路召回、重排 Rerank、Hybrid Search�
 7. 召回 chunk 重复怎么处理？去重 key 怎么设计？
 
 
+## 面试口述要点（配套代码）
+
+1. RRF 只依赖 rank，不需要归一向量、BM25 原始分；
+2. 过滤放在最前面，大院合规：**权限拦截在检索层，不进 LLM**；
+3. 去重避免同一个 chunk 多次叠加分数、浪费 token；
+4. Rerank 是重排，放在 RRF 之后，是精筛，控制送入大模型数量；
+5. 代码里抽象 Retriever 接口，后续可以替换 Qdrant、ES、本地 rerank 服务，便于私有化部署
+
+
 **/
 
 // 模块拆分
-type HybridRetriever struct{
-	vectorCli *qdrant.Client // 向量检索客户端
-	bm25Cli *elasticsearch.Client // BM25
-	rerankCli *rerank.Client // 
-	FilterSvc *PermissionFilte // 权限过滤服务
-}
+// type HybridRetriever struct{
+// 	vectorCli *qdrant.Client // 向量检索客户端
+// 	bm25Cli *elasticsearch.Client // BM25
+// 	rerankCli *rerank.Client // 
+// 	FilterSvc *PermissionFilte // 权限过滤服务
+// }
 
-//一次性检索入参
-type RetrieveReq struct{
-	Query  string
-	UserTags  []string // 用户权限标签，用于过滤
-	TopKVector int
-	TopKBm25   int
-	RRFK       int
-	RerankThresh float64
-	FinalTopK   int
-}
+// //一次性检索入参
+// type RetrieveReq struct{
+// 	Query  string
+// 	UserTags  []string // 用户权限标签，用于过滤
+// 	TopKVector int
+// 	TopKBm25   int
+// 	RRFK       int
+// 	RerankThresh float64
+// 	FinalTopK   int
+// }
 
-//召回单条结果
-type ChunkItem struct {
-	DocID      string
-    ChunkID    string
-    Text       string
-    ScoreRaw   float64 // 原始分数
-    Rank       int     // 当前分支排名
-    SourceType string  // vector / bm25
-    Meta       ChunkMeta
-    RrfScore   float64
-    RerankScore float64
-}
+// //召回单条结果
+// type ChunkItem struct {
+// 	DocID      string
+//     ChunkID    string
+//     Text       string
+//     ScoreRaw   float64 // 原始分数
+//     Rank       int     // 当前分支排名
+//     SourceType string  // vector / bm25
+//     Meta       ChunkMeta
+//     RrfScore   float64
+//     RerankScore float64
+// }
 
 // 流程函数： Query ->RetrieveParallel -> Filter ->Dedup ->RRFuse -> Rerank -> ReturnChunks
 
-package main
+//package main
 
 import (
 	"context"
